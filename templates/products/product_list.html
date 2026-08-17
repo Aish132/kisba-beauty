@@ -1,0 +1,26 @@
+﻿{% extends 'base.html' %}
+{% load static %}
+{% block title %}{% if page_title %}{{ page_title }} — {% endif %}Kisba Beauty{% endblock %}
+
+{% block extra_head %}
+<style>
+.product-link{text-decoration:none;color:inherit;display:block;transition:transform .3s ease;}
+.product-link:hover{transform:translateY(-4px);}
+.product-card .badge-bestseller{position:absolute;top:14px;left:14px;background:var(--gold-gradient);color:var(--dark);padding:3px 12px;border-radius:30px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;box-shadow:0 4px 15px rgba(212,175,55,.25);z-index:1;}
+.product-card .badge-new{position:absolute;top:14px;left:14px;background:#2ecc71;color:white;padding:3px 12px;border-radius:30px;font-size:10px;font-weight:700;text-transform:uppercase;z-index:1;}
+.pagination{display:flex;justify-content:center;gap:8px;margin-top:40px;flex-wrap:wrap;}
+.pagination a,.pagination span{width:44px;height:44px;display:flex;align-items:center;justify-content:center;border-radius:12px;border:1px solid #ddd;color:var(--gray);font-weight:500;transition:var(--transition);text-decoration:none;}
+.pagination a:hover{border-color:var(--primary);color:var(--primary);}
+.pagination .active{background:var(--primary);color:white;border-color:var(--primary);}
+</style>
+{% endblock %}
+
+{% block content %}
+{% if page_title %}
+<div style="background:var(--cream);padding:30px 6%;text-align:center;">
+    <h1 style="font-family:'Cormorant Garamond',serif;font-size:38px;color:var(--dark);margin-bottom:6px;">{{ page_title }}</h1>
+    <p style="color:var(--gray);font-size:15px;">{{ page_obj.paginator.count }} products found</p>
+</div>
+{% endif %}
+{% include 'products/_product_grid.html' %}
+{% endblock %}

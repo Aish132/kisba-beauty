@@ -1,0 +1,327 @@
+﻿{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{% block title %}Kasbi Beauty — Nepal's #1 Beauty Destination{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
+    <link rel="stylesheet" href="{% static 'css/style.css' %}?v=3" />
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+
+<!-- ===== MOUSE GLOW ===== -->
+<div class="mouse-glow" id="mouseGlow"></div>
+
+<!-- ===== TOP BAR ===== -->
+<div class="topbar">
+    <div class="left">
+        <i class="fa-solid fa-truck-fast"></i> Free Delivery inside Kathmandu on Orders above Rs.3000
+    </div>
+    <div class="right">
+        <a href="{% url 'orders:history' %}"><i class="fa-regular fa-clock"></i> Track Order</a>
+        <a href="#"><i class="fa-regular fa-newspaper"></i> Beauty Blog</a>
+        <a href="{% url 'core:contact' %}"><i class="fa-regular fa-circle-question"></i> Help Center</a>
+    </div>
+</div>
+
+<!-- ===== HEADER ===== -->
+<header class="header">
+    <div class="logo">
+        <a href="{% url 'core:home' %}">
+            {% if site_settings.logo %}
+            <img src="{{ site_settings.logo.url }}" alt="{{ site_settings.site_name }}"
+                 style="height:105px;width:auto;object-fit:contain;">
+            {% else %}
+            <img src="{% static 'img/logo_new.png' %}" alt="Kasbi Beauty"
+                 style="height:105px;width:auto;object-fit:contain;">
+            {% endif %}
+        </a>
+    </div>
+
+    <form class="search" method="get" action="{% url 'products:search' %}">
+        <input type="text" name="q" value="{{ request.GET.q }}" placeholder="Search skincare, makeup, serum...">
+        <button type="submit"><i class="fa-solid fa-magnifying-glass"></i></button>
+    </form>
+
+    <div class="header-icons">
+        <a href="{% url 'products:wishlist' %}">
+            <i class="fa-regular fa-heart"></i>
+            <span>Wishlist</span>
+        </a>
+        <div class="cart">
+            <a href="{% url 'cart:detail' %}">
+                <i class="fa-solid fa-bag-shopping"></i>
+                <span>Cart</span>
+            </a>
+            {% if cart_count > 0 %}
+            <span class="cart-badge">{{ cart_count }}</span>
+            {% endif %}
+        </div>
+        {% if user.is_authenticated %}
+        <a href="{% url 'accounts:profile' %}">
+            <i class="fa-regular fa-user" style="color:var(--primary);"></i>
+            <span style="color:var(--primary);font-weight:600;">{{ user.username|truncatechars:9 }}</span>
+        </a>
+        {% else %}
+        <a href="{% url 'accounts:login' %}">
+            <i class="fa-regular fa-user"></i>
+            <span>Account</span>
+        </a>
+        {% endif %}
+    </div>
+</header>
+
+<!-- ===== NAVIGATION ===== -->
+<nav class="navigation">
+    <ul>
+        <li><a href="{% url 'products:shop' %}" {% if request.resolver_match.url_name in 'shop,list' %}class="active"{% endif %}>Shop</a></li>
+        <li><a href="{% url 'products:brands' %}" {% if request.resolver_match.url_name == 'brands' %}class="active"{% endif %}>Brands</a></li>
+        <li><a href="{% url 'products:skincare' %}" {% if request.resolver_match.url_name == 'skincare' %}class="active"{% endif %}>Skincare</a></li>
+        <li><a href="{% url 'products:makeup' %}" {% if request.resolver_match.url_name == 'makeup' %}class="active"{% endif %}>Makeup</a></li>
+        <li><a href="{% url 'products:haircare' %}" {% if request.resolver_match.url_name == 'haircare' %}class="active"{% endif %}>Hair Care</a></li>
+        <li>
+            <a href="{% url 'products:new_arrivals' %}" class="new-arrivals-link">
+                <span class="new-arrivals-text">New Arrivals</span>
+                <span class="new-badge-animated">✨ NEW</span>
+            </a>
+        </li>
+        <li><a href="{% url 'products:bestsellers' %}" {% if request.resolver_match.url_name == 'bestsellers' %}class="active"{% endif %}>Best Sellers</a></li>
+        <li>
+            <a href="{% url 'products:offers' %}" class="offers-link">
+                <span class="offers-text">Offers</span>
+                <span class="offers-badge-animated">🔥 SALE</span>
+            </a>
+        </li>
+    </ul>
+</nav>
+
+<!-- ===== FLOATING QUICK-ACCESS DOCK ===== -->
+<div id="quickDock" style="position:fixed;left:16px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:10px;z-index:900;">
+
+    <button id="qdScrollTop" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Back to top"
+        style="width:52px;height:52px;border-radius:16px;border:none;background:#fff;box-shadow:0 4px 16px rgba(0,0,0,0.10);display:none;align-items:center;justify-content:center;cursor:pointer;transition:all 0.2s;">
+        <i class="fa-solid fa-chevron-up" style="font-size:18px;color:#5E4074;"></i>
+    </button>
+
+    <a href="{% url 'products:offers' %}" title="Hot Deals"
+        style="width:52px;height:52px;border-radius:16px;background:#fff;box-shadow:0 4px 16px rgba(0,0,0,0.10);display:flex;align-items:center;justify-content:center;transition:all 0.2s;text-decoration:none;">
+        <i class="fa-solid fa-fire" style="font-size:20px;color:#e74c3c;"></i>
+    </a>
+
+    <button id="qdCategoriesBtn" title="Categories" aria-expanded="false" aria-controls="categoryFlyout"
+        style="width:52px;height:52px;border-radius:16px;border:none;background:#fff;box-shadow:0 4px 16px rgba(0,0,0,0.10);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all 0.2s;">
+        <i class="fa-solid fa-grip" style="font-size:18px;color:#5E4074;"></i>
+    </button>
+
+    {% if user.is_authenticated %}
+    <a href="{% url 'accounts:profile' %}" title="My Account"
+        style="width:52px;height:52px;border-radius:16px;background:#fff;box-shadow:0 4px 16px rgba(0,0,0,0.10);display:flex;align-items:center;justify-content:center;transition:all 0.2s;text-decoration:none;">
+        <i class="fa-regular fa-circle-user" style="font-size:20px;color:#5E4074;"></i>
+    </a>
+    {% else %}
+    <a href="{% url 'accounts:login' %}" title="Login"
+        style="width:52px;height:52px;border-radius:16px;background:#fff;box-shadow:0 4px 16px rgba(0,0,0,0.10);display:flex;align-items:center;justify-content:center;transition:all 0.2s;text-decoration:none;">
+        <i class="fa-regular fa-circle-user" style="font-size:20px;color:#5E4074;"></i>
+    </a>
+    {% endif %}
+
+</div>
+
+<script>
+/* Show scroll-to-top button after scrolling */
+window.addEventListener('scroll', function() {
+    var btn = document.getElementById('qdScrollTop');
+    if (btn) btn.style.display = window.scrollY > 400 ? 'flex' : 'none';
+});
+/* Hover effect */
+document.querySelectorAll('#quickDock a, #quickDock button').forEach(function(el) {
+    el.addEventListener('mouseenter', function() {
+        this.style.boxShadow = '0 8px 24px rgba(94,64,116,0.18)';
+        this.style.transform = 'scale(1.08)';
+    });
+    el.addEventListener('mouseleave', function() {
+        this.style.boxShadow = '0 4px 16px rgba(0,0,0,0.10)';
+        this.style.transform = 'scale(1)';
+    });
+});
+</script>
+
+<!-- ===== CATEGORY FLYOUT ===== -->
+<div class="category-backdrop" id="categoryBackdrop"></div>
+<aside class="category-flyout" id="categoryFlyout">
+    <div class="cf-heading">
+        <span><i class="fa-solid fa-bars"></i> Shop By Category</span>
+        <button class="cf-close" id="categoryClose" aria-label="Close categories"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <ul>
+        {% for category in nav_categories %}
+        <li>
+            <a href="{% url 'products:shop' %}?category={{ category.slug }}" class="cf-link">
+                <i class="fa-solid fa-tag cf-icon"></i>
+                <span class="cf-label">{{ category.name }}</span>
+                <span class="cf-count">{{ category.products.count }}+</span>
+                <i class="fa-solid fa-chevron-right cf-arrow"></i>
+            </a>
+        </li>
+        {% endfor %}
+        <li class="cf-divider"></li>
+        <li><a href="{% url 'products:brands' %}" class="cf-link"><i class="fa-solid fa-tags cf-icon"></i><span class="cf-label">All Brands</span><i class="fa-solid fa-chevron-right cf-arrow"></i></a></li>
+        <li><a href="{% url 'products:offers' %}" class="cf-link"><i class="fa-solid fa-fire cf-icon"></i><span class="cf-label">Offers &amp; Deals</span><i class="fa-solid fa-chevron-right cf-arrow"></i></a></li>
+    </ul>
+    <a href="{% url 'products:shop' %}" class="cf-viewall"><i class="fa-solid fa-bag-shopping"></i> View All Products</a>
+</aside>
+
+<!-- ===== DJANGO MESSAGES ===== -->
+{% if messages %}
+<div style="padding:0 6%;margin-top:10px;position:relative;z-index:200;">
+    {% for message in messages %}
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 18px;border-radius:10px;margin-bottom:8px;font-size:14px;{% if 'error' in message.tags %}background:#fdecea;border:1px solid #f5c6cb;color:#721c24;{% elif 'warning' in message.tags %}background:#fff3cd;border:1px solid #ffeaa7;color:#856404;{% else %}background:#d4edda;border:1px solid #c3e6cb;color:#155724;{% endif %}">
+        <span>{{ message }}</span>
+        <button onclick="this.parentElement.remove()" style="background:none;border:none;cursor:pointer;font-size:18px;opacity:0.5;">&times;</button>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+{% block pre_content %}{% endblock %}
+
+<!-- ===== MAIN CONTENT ===== -->
+{% block content %}{% endblock %}
+
+<!-- ===== FOOTER ===== -->
+<footer class="footer">
+    <div class="footer-grid">
+        <div>
+            <!-- Logo from SiteSettings, fallback to static -->
+            <a href="{% url 'core:home' %}">
+                {% if site_settings.logo %}
+                <img src="{{ site_settings.logo.url }}" alt="{{ site_settings.site_name }}"
+                     style="height:140px;width:auto;margin-bottom:16px;object-fit:contain;">
+                {% else %}
+                <img src="{% static 'img/logo1.png' %}" alt="Kasbi Beauty"
+                     style="height:45px;width:auto;margin-bottom:16px;filter:brightness(10) grayscale(1) opacity(0.8);">
+                {% endif %}
+            </a>
+            <p>{{ site_settings.about_text|default:"Your trusted beauty destination in Nepal. Premium skincare, makeup, haircare & more — all 100% authentic."|truncatewords:18 }}</p>
+            <!-- Social links from SiteSettings -->
+            <div class="social">
+                {% if site_settings.facebook_url %}
+                <a href="{{ site_settings.facebook_url }}" target="_blank" rel="noopener"><i class="fa-brands fa-facebook-f"></i></a>
+                {% else %}
+                <a href="#"><i class="fa-brands fa-facebook-f"></i></a>
+                {% endif %}
+                {% if site_settings.instagram_url %}
+                <a href="{{ site_settings.instagram_url }}" target="_blank" rel="noopener"><i class="fa-brands fa-instagram"></i></a>
+                {% else %}
+                <a href="#"><i class="fa-brands fa-instagram"></i></a>
+                {% endif %}
+                {% if site_settings.youtube_url %}
+                <a href="{{ site_settings.youtube_url }}" target="_blank" rel="noopener"><i class="fa-brands fa-youtube"></i></a>
+                {% else %}
+                <a href="#"><i class="fa-brands fa-youtube"></i></a>
+                {% endif %}
+                {% if site_settings.tiktok_url %}
+                <a href="{{ site_settings.tiktok_url }}" target="_blank" rel="noopener"><i class="fa-brands fa-tiktok"></i></a>
+                {% else %}
+                <a href="#"><i class="fa-brands fa-tiktok"></i></a>
+                {% endif %}
+            </div>
+        </div>
+        <div>
+            <h4>Quick Links</h4>
+            <ul>
+                <li><a href="{% url 'core:about' %}">About Us</a></li>
+                <li><a href="{% url 'core:contact' %}">Contact Us</a></li>
+                <li><a href="#">Beauty Blog</a></li>
+                <li><a href="{% url 'orders:history' %}">Track Order</a></li>
+                <li><a href="{% url 'core:returns' %}">Returns &amp; Refunds</a></li>
+            </ul>
+        </div>
+        <div>
+            <h4>Categories</h4>
+            <ul>
+                <li><a href="{% url 'products:skincare' %}">Skincare</a></li>
+                <li><a href="{% url 'products:makeup' %}">Makeup</a></li>
+                <li><a href="{% url 'products:haircare' %}">Hair Care</a></li>
+                <li><a href="{% url 'products:shop' %}?category=fragrance">Fragrance</a></li>
+                <li><a href="{% url 'products:shop' %}?category=tools">Beauty Tools</a></li>
+            </ul>
+        </div>
+        <div>
+            <h4>Contact</h4>
+            <ul>
+                {% if site_settings.phone %}
+                <li><a href="tel:{{ site_settings.phone }}"><i class="fa-solid fa-phone" style="margin-right:8px;"></i>{{ site_settings.phone }}</a></li>
+                {% else %}
+                <li><a href="tel:+9779800000000"><i class="fa-solid fa-phone" style="margin-right:8px;"></i>+977 980-0000000</a></li>
+                {% endif %}
+                {% if site_settings.email %}
+                <li><a href="mailto:{{ site_settings.email }}"><i class="fa-regular fa-envelope" style="margin-right:8px;"></i>{{ site_settings.email }}</a></li>
+                {% else %}
+                <li><a href="mailto:support@kasbibeauty.com"><i class="fa-regular fa-envelope" style="margin-right:8px;"></i>support@kasbibeauty.com</a></li>
+                {% endif %}
+                {% if site_settings.address %}
+                <li><i class="fa-regular fa-location-dot" style="margin-right:8px;"></i>{{ site_settings.address }}</li>
+                {% else %}
+                <li><i class="fa-regular fa-location-dot" style="margin-right:8px;"></i>Kathmandu, Nepal</li>
+                {% endif %}
+            </ul>
+        </div>
+    </div>
+    <div class="footer-bottom">
+        <span>&copy; {% now "Y" %} {{ site_settings.site_name|default:"Kasbi Beauty" }}. All rights reserved.</span>
+        <div class="payment">
+            <i class="fa-brands fa-cc-visa"></i>
+            <i class="fa-brands fa-cc-mastercard"></i>
+            <i class="fa-brands fa-cc-paypal"></i>
+            <i class="fa-solid fa-wallet"></i>
+        </div>
+    </div>
+</footer>
+
+<script>
+// Mouse glow
+const mouseGlow=document.getElementById('mouseGlow');
+if(mouseGlow){let t;document.addEventListener('mousemove',e=>{mouseGlow.style.left=e.clientX+'px';mouseGlow.style.top=e.clientY+'px';mouseGlow.classList.add('active');clearTimeout(t);t=setTimeout(()=>mouseGlow.classList.remove('active'),100);});}
+
+// Category flyout
+const qdCat=document.getElementById('qdCategoriesBtn');
+const flyout=document.getElementById('categoryFlyout');
+const backdrop=document.getElementById('categoryBackdrop');
+const cfClose=document.getElementById('categoryClose');
+const qdTop=document.getElementById('qdScrollTop');
+function openFly(){flyout.classList.add('open');backdrop.classList.add('visible');qdCat.classList.add('active');qdCat.setAttribute('aria-expanded','true');if(window.innerWidth<=768)document.body.style.overflow='hidden';}
+function closeFly(){flyout.classList.remove('open');backdrop.classList.remove('visible');qdCat.classList.remove('active');qdCat.setAttribute('aria-expanded','false');document.body.style.overflow='';}
+if(qdCat)qdCat.addEventListener('click',()=>flyout.classList.contains('open')?closeFly():openFly());
+if(cfClose)cfClose.addEventListener('click',closeFly);
+if(backdrop)backdrop.addEventListener('click',closeFly);
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeFly();});
+
+// Scroll top
+if(qdTop){window.addEventListener('scroll',()=>qdTop.classList.toggle('visible',window.scrollY>400));qdTop.addEventListener('click',()=>window.scrollTo({top:0,behavior:'smooth'}));}
+
+// Header shadow
+const hdr=document.querySelector('.header');
+if(hdr)window.addEventListener('scroll',()=>{hdr.style.boxShadow=window.pageYOffset>50?'0 4px 30px rgba(0,0,0,0.08)':'0 2px 20px rgba(0,0,0,0.04)';});
+
+// Scroll reveal
+function doReveal(){document.querySelectorAll('.scroll-reveal').forEach(el=>{if(el.getBoundingClientRect().top<window.innerHeight-100)el.classList.add('visible');});}
+window.addEventListener('scroll',doReveal);window.addEventListener('load',doReveal);
+
+// Toast
+function showToast(msg){const e=document.querySelector('.toast-notification');if(e)e.remove();const t=document.createElement('div');t.className='toast-notification';t.textContent=msg;t.style.cssText='position:fixed;bottom:30px;right:30px;background:#2d1a3a;color:white;padding:14px 24px;border-radius:12px;font-size:14px;font-weight:500;box-shadow:0 8px 30px rgba(0,0,0,0.2);z-index:10000;animation:slideInUp 0.4s ease forwards;font-family:Inter,sans-serif;max-width:350px;border-left:4px solid #e91e63;';document.body.appendChild(t);setTimeout(()=>{t.style.animation='slideOutDown 0.4s ease forwards';setTimeout(()=>t.remove(),400);},3000);}
+</script>
+
+<style>
+@keyframes slideInUp{0%{transform:translateY(100px);opacity:0;}100%{transform:translateY(0);opacity:1;}}
+@keyframes slideOutDown{0%{transform:translateY(0);opacity:1;}100%{transform:translateY(100px);opacity:0;}}
+</style>
+
+{% block extra_js %}{% endblock %}
+</body>
+</html>
