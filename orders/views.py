@@ -193,7 +193,9 @@ def esewa_success(request):
             return redirect('orders:history')
 
         if status == 'COMPLETE':
-            order = get_object_or_404(Order, order_number=transaction_uuid)
+            # transaction_uuid is formatted as "{order_number}-{timestamp}"
+            order_number = transaction_uuid.rsplit('-', 1)[0]
+            order = get_object_or_404(Order, order_number=order_number)
             order.is_paid = True
             order.status = 'processing'
             order.save()

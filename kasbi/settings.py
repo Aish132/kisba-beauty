@@ -282,14 +282,17 @@ SECURE_PROXY_SSL_HEADER = (
 
 if not DEBUG:
 
-    # Redirect HTTP → HTTPS
-    SECURE_SSL_REDIRECT = True
+    # Do NOT set SECURE_SSL_REDIRECT=True on Render — Render's load balancer
+    # terminates SSL and forwards requests as HTTP internally, so enabling this
+    # causes an infinite redirect loop.  HTTPS is already enforced at the
+    # platform level.
+    SECURE_SSL_REDIRECT = False
 
     # Secure cookies
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
 
-    # HSTS
+    # HSTS — Render handles HTTPS so we can safely send this header
     SECURE_HSTS_SECONDS = 31536000
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = True
