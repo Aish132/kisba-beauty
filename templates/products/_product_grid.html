@@ -1,0 +1,350 @@
+{% load static %}
+
+<!-- ===== SHOP SECTION ===== -->
+<section class="shop-section">
+
+    <!-- ===== FILTER SIDEBAR (dynamic from DB) ===== -->
+    <div class="filter-sidebar">
+        <h3><i class="fa-solid fa-sliders" style="margin-right:10px;"></i>Filters</h3>
+
+        <form method="get" id="filterForm">
+            <!-- Preserve search query if present -->
+            {% if query %}<input type="hidden" name="q" value="{{ query }}">{% endif %}
+
+            <!-- CATEGORIES (hidden on dedicated category pages — already scoped) -->
+            {% if not locked_category_slug %}
+            <div class="filter-group">
+                <h4>Categories</h4>
+                {% for cat in categories %}
+                <label>
+                    <input type="checkbox" name="category" value="{{ cat.slug }}"
+                        {% if cat.slug in selected_categories %}checked{% endif %}>
+                    {{ cat.name }}
+                </label>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- PRICE RANGE -->
+            <div class="filter-group">
+                <h4>Price Range</h4>
+                <div class="price-range">
+                    <input type="number" name="min_price" id="priceMin"
+                           placeholder="Min" value="{{ min_price }}">
+                    <span>—</span>
+                    <input type="number" name="max_price" id="priceMax"
+                           placeholder="Max" value="{{ max_price }}">
+                </div>
+            </div>
+
+            <!-- BRANDS -->
+            <div class="filter-group">
+                <h4>Brands</h4>
+                {% for brand in brands %}
+                <label class="brand-label{% if forloop.counter > 6 %} brand-extra" style="display:none{% endif %}">
+                    <input type="checkbox" name="brand" value="{{ brand.slug }}"
+                        {% if brand.slug in selected_brands %}checked{% endif %}>
+                    {{ brand.name }}
+                </label>
+                {% endfor %}
+                {% if brands|length > 6 %}
+                <button type="button" class="btn-show-more" id="brandToggleBtn" onclick="toggleBrands()">
+                    <i class="fa-solid fa-chevron-down" id="brandToggleIcon"></i> Show more ({{ brands|length|add:"-6" }} more)
+                </button>
+                {% endif %}
+            </div>
+
+            <!-- DISCOUNT -->
+            <div class="filter-group">
+                <h4>Discount</h4>
+                {% for pct, label in discount_choices %}
+                <label>
+                    <input type="radio" name="min_discount" value="{{ pct }}"
+                           {% if min_discount == pct|stringformat:"s" %}checked{% endif %}
+                           style="accent-color:var(--primary);width:15px;height:15px;cursor:pointer;">
+                    {{ label }}
+                </label>
+                {% endfor %}
+                {% if min_discount %}
+                <label>
+                    <input type="radio" name="min_discount" value=""
+                           style="accent-color:var(--primary);width:15px;height:15px;cursor:pointer;">
+                    Any discount
+                </label>
+                {% endif %}
+            </div>
+
+            <!-- SORT -->
+            <div class="filter-group">
+                <h4>Sort By</h4>
+                <select name="sort">
+                    <option value="newest"     {% if sort == 'newest' %}selected{% endif %}>Newest First</option>
+                    <option value="price_low"  {% if sort == 'price_low' %}selected{% endif %}>Price: Low to High</option>
+                    <option value="price_high" {% if sort == 'price_high' %}selected{% endif %}>Price: High to Low</option>
+                    <option value="popularity" {% if sort == 'popularity' %}selected{% endif %}>Most Popular</option>
+                </select>
+            </div>
+
+            <button type="submit" class="btn-filter">
+                <i class="fa-solid fa-rotate-right"></i> Apply Filters
+            </button>
+            <a href="{{ request.path }}" class="btn-filter btn-filter-clear"
+               style="display:block;text-align:center;text-decoration:none;margin-top:10px;">
+                <i class="fa-solid fa-times"></i> Clear Filters
+            </a>
+        </form>
+    </div>
+
+    <!-- ===== PRODUCT GRID (from DB) ===== -->
+    <div style="flex:1;min-width:0;">
+        <div class="shop-toolbar">
+            <span>
+                Showing {{ page_obj.start_index }}–{{ page_obj.end_index }}
+                of {{ page_obj.paginator.count }} product{{ page_obj.paginator.count|pluralize }}
+            </span>
+            {# Top-right sort: submits the full filter form so no params are lost #}
+            <select onchange="document.getElementById('filterForm').querySelector('[name=sort]').value=this.value;document.getElementById('filterForm').submit();">
+                <option value="newest"     {% if sort == 'newest' %}selected{% endif %}>Sort by: Newest</option>
+                <option value="price_low"  {% if sort == 'price_low' %}selected{% endif %}>Sort by: Price: Low to High</option>
+                <option value="price_high" {% if sort == 'price_high' %}selected{% endif %}>Sort by: Price: High to Low</option>
+                <option value="popularity" {% if sort == 'popularity' %}selected{% endif %}>Sort by: Most Popular</option>
+            </select>
+        </div>
+
+        <div class="product-grid" id="productGrid">
+            {% for p in page_obj %}
+            <a href="{{ p.get_absolute_url }}" class="product-link">
+                <div class="product-card">
+                    <div class="image-wrap">
+                        <!-- Wishlist button -->
+                        {% if user.is_authenticated %}
+                        <span class="wishlist {% if p.id in wishlist_ids %}active{% endif %}"
+                              onclick="event.preventDefault();event.stopPropagation();toggleWishlist(this,{{ p.id }});">
+                            <i class="fa-{% if p.id in wishlist_ids %}solid{% else %}regular{% endif %} fa-heart"></i>
+                        </span>
+                        {% else %}
+                        <a href="{% url 'accounts:login' %}?next={{ request.get_full_path }}"
+                           class="wishlist" onclick="event.stopPropagation();">
+                            <i class="fa-regular fa-heart"></i>
+                        </a>
+                        {% endif %}
+
+                        <!-- Product image or initials fallback -->
+                        {% if p.thumbnail %}
+                        <img src="{{ p.thumbnail.url }}" alt="{{ p.name }}">
+                        {% else %}
+                        <svg viewBox="0 0 200 200" style="position:absolute;inset:0;width:100%;height:100%;">
+                            <rect width="200" height="200" fill="#f0ebe2"/>
+                            <text x="100" y="118" font-family="Cormorant Garamond, serif"
+                                  font-size="72" font-weight="700" fill="#C97786"
+                                  text-anchor="middle">{{ p.name|first|upper }}</text>
+                        </svg>
+                        {% endif %}
+                    </div>
+
+                    <div class="info">
+                        <!-- Badges -->
+                        <div class="product-badges">
+                            {% if p.is_featured %}
+                            <span class="product-badge bestseller">⭐ Featured</span>
+                            {% endif %}
+                            {% if p.is_new_arrival %}
+                            <span class="product-badge new-arrival">✨ New</span>
+                            {% endif %}
+                            {% if p.is_bestseller %}
+                            <span class="product-badge bestseller-flag">🔥 Bestseller</span>
+                            {% endif %}
+                            {% if p.has_discount %}
+                            <span class="product-badge discount">-{{ p.get_discount_percent }}%</span>
+                            {% endif %}
+                        </div>
+
+                        <span class="brand">{{ p.brand.name|default:"" }}</span>
+                        <h3>{{ p.name|truncatechars:40 }}</h3>
+
+                        <div class="price">
+                            <span class="current">Rs.{{ p.current_price|floatformat:0 }}</span>
+                            {% if p.has_discount %}
+                            <span class="old">Rs.{{ p.price|floatformat:0 }}</span>
+                            {% endif %}
+                        </div>
+
+                        <!-- Add to cart / out of stock / login -->
+                        {% if user.is_authenticated %}
+                            {% if p.in_stock %}
+                            <form method="post" action="{% url 'cart:add' p.id %}"
+                                  onclick="event.stopPropagation();">
+                                {% csrf_token %}
+                                <input type="hidden" name="quantity" value="1">
+                                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                                <button type="submit" class="add-btn">
+                                    <i class="fa-solid fa-cart-plus" style="margin-right:6px;"></i>Add To Cart
+                                </button>
+                            </form>
+                            {% else %}
+                            <button class="add-btn" disabled>Out of Stock</button>
+                            {% endif %}
+                        {% else %}
+                        <a href="{% url 'accounts:login' %}?next={{ request.get_full_path }}"
+                           class="add-btn" style="display:block;text-align:center;text-decoration:none;"
+                           onclick="event.stopPropagation();">Login to Buy</a>
+                        {% endif %}
+                    </div>
+                </div>
+            </a>
+            {% empty %}
+            <div class="no-results" style="grid-column:1/-1;">
+                <i class="fa-regular fa-face-frown"></i>
+                <h3 style="font-family:'Cormorant Garamond',serif;font-size:24px;color:var(--dark);margin-bottom:8px;">
+                    No Products Found
+                </h3>
+                <p style="color:var(--gray);">Try adjusting your filters or
+                    <a href="{% url 'products:shop' %}" style="color:var(--primary);">browse all products</a>.
+                </p>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- PAGINATION -->
+        {% if page_obj.has_other_pages %}
+        <div class="pagination">
+            {# Build a reusable param string that preserves all active filters #}
+            {% if page_obj.has_previous %}
+            <a href="?page={{ page_obj.previous_page_number }}{% if sort %}&sort={{ sort }}{% endif %}{% if query %}&q={{ query }}{% endif %}{% for c in selected_categories %}&category={{ c }}{% endfor %}{% for b in selected_brands %}&brand={{ b }}{% endfor %}{% if min_price %}&min_price={{ min_price }}{% endif %}{% if max_price %}&max_price={{ max_price }}{% endif %}{% if min_discount %}&min_discount={{ min_discount }}{% endif %}">
+                <i class="fa-solid fa-chevron-left"></i>
+            </a>
+            {% endif %}
+
+            {% for num in page_obj.paginator.page_range %}
+                {% if page_obj.number == num %}
+                <a class="active">{{ num }}</a>
+                {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                <a href="?page={{ num }}{% if sort %}&sort={{ sort }}{% endif %}{% if query %}&q={{ query }}{% endif %}{% for c in selected_categories %}&category={{ c }}{% endfor %}{% for b in selected_brands %}&brand={{ b }}{% endfor %}{% if min_price %}&min_price={{ min_price }}{% endif %}{% if max_price %}&max_price={{ max_price }}{% endif %}{% if min_discount %}&min_discount={{ min_discount }}{% endif %}">{{ num }}</a>
+                {% endif %}
+            {% endfor %}
+
+            {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}{% if sort %}&sort={{ sort }}{% endif %}{% if query %}&q={{ query }}{% endif %}{% for c in selected_categories %}&category={{ c }}{% endfor %}{% for b in selected_brands %}&brand={{ b }}{% endfor %}{% if min_price %}&min_price={{ min_price }}{% endif %}{% if max_price %}&max_price={{ max_price }}{% endif %}{% if min_discount %}&min_discount={{ min_discount }}{% endif %}">
+                <i class="fa-solid fa-chevron-right"></i>
+            </a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</section>
+
+<style>
+.shop-section{display:flex;gap:40px;padding:40px 6%;max-width:1440px;margin:0 auto;}
+.filter-sidebar{flex:0 0 260px;background:#fff;padding:24px 20px;border-radius:16px;box-shadow:0 4px 20px rgba(0,0,0,0.06);height:fit-content;position:sticky;top:80px;}
+.filter-sidebar h3{font-size:18px;font-weight:700;color:var(--dark);margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid #f0f0f0;}
+.filter-group{margin-bottom:20px;}
+.filter-group h4{font-size:12px;font-weight:700;color:var(--dark);margin-bottom:10px;text-transform:uppercase;letter-spacing:0.5px;}
+.filter-group label{display:flex;align-items:center;gap:10px;padding:5px 0;font-size:13px;color:#555;cursor:pointer;transition:color 0.2s;}
+.filter-group label:hover{color:var(--primary);}
+.filter-group input[type="checkbox"]{accent-color:var(--primary);width:15px;height:15px;cursor:pointer;}
+.filter-group select{width:100%;padding:8px 12px;border:1px solid #e2ded7;border-radius:8px;font-size:13px;outline:none;font-family:'Inter',sans-serif;}
+.filter-group select:focus{border-color:var(--primary);}
+.price-range{display:flex;gap:10px;align-items:center;}
+.price-range input{flex:1;padding:8px 10px;border:1px solid #e2ded7;border-radius:8px;font-size:13px;outline:none;transition:border-color 0.2s;}
+.price-range input:focus{border-color:var(--primary);}
+.price-range span{color:#999;flex-shrink:0;}
+.btn-filter{padding:11px 16px;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;transition:all 0.3s;width:100%;font-family:'Inter',sans-serif;background:var(--primary);color:#fff;}
+.btn-filter:hover{opacity:.9;transform:translateY(-1px);}
+.btn-filter-clear{background:rgba(201,119,134,0.12);color:var(--primary)!important;border:1px solid rgba(201,119,134,0.3);}
+.btn-show-more{display:flex;align-items:center;gap:6px;padding:6px 0;background:none;border:none;color:var(--primary);font-size:12px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;margin-top:4px;transition:opacity 0.2s;}
+.btn-show-more:hover{opacity:0.75;}
+.shop-toolbar{display:flex;justify-content:space-between;align-items:center;padding:16px 0;border-bottom:1px solid #ece7dd;margin-bottom:24px;flex-wrap:wrap;gap:12px;}
+.shop-toolbar span{font-size:14px;color:#666;}
+.shop-toolbar select{padding:8px 16px;border:1px solid #e2ded7;border-radius:20px;font-size:13px;outline:none;background:#fff;cursor:pointer;font-family:'Inter',sans-serif;}
+.shop-toolbar select:focus{border-color:var(--primary);}
+.product-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:24px;}
+.product-link{text-decoration:none;color:inherit;display:block;}
+.product-card{background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,0.06);transition:all 0.3s;height:100%;display:flex;flex-direction:column;}
+.product-card:hover{box-shadow:0 8px 30px rgba(0,0,0,0.12);transform:translateY(-4px);}
+.product-card .image-wrap{position:relative;padding-top:100%;background:#f8f5ee;overflow:hidden;}
+.product-card .image-wrap img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;padding:20px;transition:transform 0.3s;}
+.product-card:hover .image-wrap img{transform:scale(1.05);}
+.wishlist{position:absolute;top:12px;right:12px;width:34px;height:34px;border-radius:50%;background:#fff;border:1px solid #eee;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all 0.3s;z-index:2;color:#ccc;text-decoration:none;}
+.wishlist:hover,.wishlist.active{border-color:var(--primary);color:var(--primary);background:#fce4ec;}
+.product-card .info{padding:14px 16px 16px;display:flex;flex-direction:column;flex:1;}
+.product-badges{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px;min-height:20px;}
+.product-badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:9px;font-weight:700;text-transform:uppercase;}
+.product-badge.bestseller{background:var(--primary);color:#fff;}
+.product-badge.discount{background:#e74c3c;color:#fff;}
+.product-badge.new-badge{background:#2ecc71;color:#fff;}
+.product-badge.new-arrival{background:#4caf50;color:#fff;}
+.product-badge.bestseller-flag{background:#e77b78;color:#fff;}
+.product-card .info .brand{font-size:10px;color:#999;text-transform:uppercase;letter-spacing:0.5px;font-weight:700;}
+.product-card .info h3{font-size:14px;font-weight:600;margin:4px 0 10px;line-height:1.3;color:var(--dark);}
+.product-card .info .price{display:flex;align-items:baseline;gap:8px;margin-bottom:12px;margin-top:auto;}
+.product-card .info .price .current{font-size:17px;font-weight:800;color:var(--primary);}
+.product-card .info .price .old{font-size:12px;color:#999;text-decoration:line-through;}
+.add-btn{width:100%;padding:10px;background:var(--primary);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;transition:all 0.3s;font-family:'Inter',sans-serif;}
+.add-btn:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 4px 14px rgba(201,119,134,0.35);}
+.add-btn:disabled{opacity:0.6;cursor:not-allowed;}
+.no-results{text-align:center;padding:60px 20px;color:#999;}
+.no-results i{font-size:48px;display:block;margin-bottom:16px;}
+.pagination{display:flex;justify-content:center;gap:8px;margin-top:40px;flex-wrap:wrap;}
+.pagination a{display:inline-flex;align-items:center;justify-content:center;min-width:40px;height:40px;padding:0 12px;border-radius:10px;background:#fff;border:1px solid #ece7dd;color:#666;text-decoration:none;font-weight:600;font-size:13px;transition:all 0.3s;}
+.pagination a:hover:not(.active){background:#fce4ec;border-color:var(--primary);color:var(--primary);}
+.pagination a.active{background:var(--primary);color:#fff;border-color:transparent;}
+@media(max-width:1200px){.product-grid{grid-template-columns:repeat(3,1fr);}}
+@media(max-width:992px){.shop-section{flex-direction:column;}.filter-sidebar{flex:1;position:static;}.product-grid{grid-template-columns:repeat(3,1fr);}}
+@media(max-width:768px){.product-grid{grid-template-columns:repeat(2,1fr);gap:14px;}.shop-section{padding:20px 4%;}.filter-sidebar{flex:0 0 auto;}}
+@media(max-width:480px){.product-grid{grid-template-columns:1fr 1fr;gap:12px;}}
+</style>
+
+<script>
+var _brandsExpanded = false;
+function toggleBrands() {
+    _brandsExpanded = !_brandsExpanded;
+    var extras = document.querySelectorAll('.brand-extra');
+    var btn    = document.getElementById('brandToggleBtn');
+    var icon   = document.getElementById('brandToggleIcon');
+    extras.forEach(function(el) {
+        el.style.display = _brandsExpanded ? 'flex' : 'none';
+    });
+    if (_brandsExpanded) {
+        btn.innerHTML = '<i class="fa-solid fa-chevron-up" id="brandToggleIcon"></i> Show less';
+    } else {
+        btn.innerHTML = '<i class="fa-solid fa-chevron-down" id="brandToggleIcon"></i> Show more (' + extras.length + ' more)';
+    }
+}
+
+// On page load: if a hidden brand is already checked (active filter), auto-expand
+(function() {
+    var extras = document.querySelectorAll('.brand-extra');
+    for (var i = 0; i < extras.length; i++) {
+        if (extras[i].querySelector('input[type="checkbox"]').checked) {
+            toggleBrands();
+            break;
+        }
+    }
+})();
+
+function toggleWishlist(el, productId) {
+    var icon = el.querySelector('i');
+    var isWishlisted = icon.classList.contains('fa-solid');
+    var url = isWishlisted
+        ? '/products/wishlist/remove/' + productId + '/'
+        : '/products/wishlist/add/' + productId + '/';
+
+    fetch(url, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    }).then(function() {
+        if (isWishlisted) {
+            icon.classList.replace('fa-solid', 'fa-regular');
+            el.classList.remove('active');
+        } else {
+            icon.classList.replace('fa-regular', 'fa-solid');
+            el.classList.add('active');
+        }
+    }).catch(function() {
+        window.location.href = url;
+    });
+}
+</script>
